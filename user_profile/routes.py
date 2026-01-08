@@ -9,42 +9,69 @@ from cloudinary_setup import upload_image
 router = APIRouter()
 
 
-@router.post("/", response_model=schemas.UserProfile)
-def create_profile(
-    profile: schemas.UserProfileCreate,
-    db: Session = Depends(get_db),
-    current_user: auth_models.User = Depends(get_current_active_user),
-):
-    # Check if profile already exists
-    existing_profile = crud.get_profile(db, current_user.id)
-    if existing_profile:
-        raise HTTPException(status_code=400, detail="Profile already exists")
-    
-    return crud.create_profile(
-        db=db,
-        user_id=current_user.id,
-        profile=profile
-    )
-
-
 @router.get("/", response_model=schemas.UserProfile)
-def read_profile(
+def get_profile(
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
+    """Get current user's profile with all user details"""
     db_profile = crud.get_profile(db, current_user.id)
-    if not db_profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return db_profile
+    
+    # Build complete profile response
+    profile_data = {
+        "user_id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "user_type": current_user.user_type.value,
+        "is_active": current_user.is_active,
+        "bio": db_profile.bio if db_profile else None,
+        "phone_number": db_profile.phone_number if db_profile else None,
+        "delivery_address": db_profile.delivery_address if db_profile else None,
+        "image_url": db_profile.image_url if db_profile else None,
+        "created_at": db_profile.created_at if db_profile else current_user.created_at,
+        "updated_at": db_profile.updated_at if db_profile else current_user.updated_at,
+    }
+    
+    return profile_data
 
 
-@router.put("/", response_model=schemas.UserProfile)
+@router.patch("/", response_model=schemas.UserProfile)
 def update_profile(
     profile_update: schemas.UserProfileUpdate,
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
-    return crud.update_profile(db, current_user.id, profile_update)
+    """
+    Update user profile including:
+    - username (must be unique)
+    - phone_number (validated format)
+    - bio
+    - delivery_address
+    - image_url
+    """
+    updated_profile = crud.update_profile(db, current_user.id, profile_update)
+    
+    # Refresh user to get updated username if it was changed
+    db.refresh(current_user)
+    
+    # Return complete profile data
+    profile_data = {
+        "user_id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "user_type": current_user.user_type.value,
+        "is_active": current_user.is_active,
+        "bio": updated_profile.bio,
+        "phone_number": updated_profile.phone_number,
+        "delivery_address": updated_profile.delivery_address,
+        "image_url": updated_profile.image_url,
+        "created_at": updated_profile.created_at,
+        "updated_at": updated_profile.updated_at,
+    }
+    
+    return profile_data
 
 
 @router.post("/upload-image", response_model=schemas.UserProfile)
@@ -53,9 +80,10 @@ async def upload_profile_image(
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
+    """Upload profile image"""
     try:
         # Upload to Cloudinary
-        image_url = await upload_image(file)
+        image_url = await upload_image(file, folder="user_profiles")
 
         if not image_url:
             raise HTTPException(status_code=500, detail="Image upload failed — no URL returned")
@@ -67,7 +95,23 @@ async def upload_profile_image(
             schemas.UserProfileUpdate(image_url=image_url)
         )
 
-        return updated_profile
+        # Return complete profile data
+        profile_data = {
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "user_type": current_user.user_type.value,
+            "is_active": current_user.is_active,
+            "bio": updated_profile.bio,
+            "phone_number": updated_profile.phone_number,
+            "delivery_address": updated_profile.delivery_address,
+            "image_url": updated_profile.image_url,
+            "created_at": updated_profile.created_at,
+            "updated_at": updated_profile.updated_at,
+        }
+        
+        return profile_data
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
@@ -79,6 +123,7 @@ def change_password(
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
+    """Change user password"""
     user = auth_crud.get_user_by_username(db, current_user.username)
 
     if not auth_crud.verify_password(request.old_password, user.hashed_password):

@@ -33,6 +33,7 @@ class CravingBase(BaseModel):
 
 
 class CravingCreate(CravingBase):
+    """Create craving with optional image_url from multipart upload"""
     pass
 
 

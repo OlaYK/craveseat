@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Form
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from authentication.auth import get_current_active_user
@@ -12,12 +12,41 @@ router = APIRouter()
 
 @router.post("/", response_model=schemas.CravingResponse, status_code=status.HTTP_201_CREATED)
 async def create_craving(
-    craving: schemas.CravingCreate,
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    category: str = Form(...),
+    anonymous: Optional[bool] = Form(False),
+    delivery_address: Optional[str] = Form(None),
+    recommended_vendor: Optional[str] = Form(None),
+    vendor_contact: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
-    """Create a new craving with auto-generated share token"""
-    db_craving = crud.create_craving(db, current_user.id, craving)
+    """Create a new craving with optional image upload"""
+    
+    # Upload image if provided
+    image_url = None
+    if image:
+        try:
+            image_url = await upload_image(image, folder="cravings")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
+    
+    # Create craving object
+    craving_data = schemas.CravingCreate(
+        title=title,
+        description=description,
+        category=category,
+        anonymous=anonymous,
+        delivery_address=delivery_address,
+        recommended_vendor=recommended_vendor,
+        vendor_contact=vendor_contact,
+        notes=notes,
+    )
+    
+    db_craving = crud.create_craving(db, current_user.id, craving_data, image_url)
     return db_craving
 
 
@@ -53,7 +82,7 @@ async def upload_craving_image(
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
-    """Upload an image for a craving"""
+    """Upload/update an image for an existing craving"""
     db_craving = crud.get_craving(db, craving_id)
     if not db_craving:
         raise HTTPException(status_code=404, detail="Craving not found")

@@ -17,9 +17,9 @@ models.Base.metadata.create_all(bind=engine)
 
 SECRET_KEY = "e5a50e37f6c8c6733b341610b468e5a5f53e164c12f4eac4069586a544497d1e" 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -29,7 +29,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def authenticate_user(db: Session, username: str, password: str):
-    user = crud.get_user_by_username(db, username)
+    user = crud.get_user_by_username(db, username.lower())
     if not user:
         return None
     if not crud.verify_password(password, user.hashed_password):
@@ -67,21 +67,28 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if user.password != user.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
     
-    db_user = crud.get_user_by_username(db, username=user.username)
+    # Check username (case-insensitive)
+    db_user = crud.get_user_by_username(db, username=user.username.lower())
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
 
-    db_user = crud.get_user_by_email(db, email=user.email)
+    # Check email (case-insensitive)
+    db_user = crud.get_user_by_email(db, email=user.email.lower())
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    return crud.create_user(db=db, user=user)
+    # Create user with profile in one transaction
+    return crud.create_user_with_profile(db=db, user=user)
     
 
 @router.post("/login", response_model=schemas.Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
+    """
+    OAuth2 compatible token login endpoint.
+    Use username and password to get an access token.
+    """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

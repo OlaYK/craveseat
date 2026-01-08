@@ -7,7 +7,7 @@ class UserProfile(Base):
 
     user_id = Column(String, ForeignKey("users.id"), primary_key=True, nullable=False)
     bio = Column(String, nullable=True)
-    phone_number = Column(String, nullable=True)
+    phone_number = Column(String, nullable=False)  
     delivery_address = Column(String, nullable=True)
     image_url = Column(String, nullable=True) 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
