@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
-psycopg2-binary
+sqlalchemy==2.0.20
+psycopg2-binary==2.9.7
 pydantic[email]
 python-jose[cryptography]
 passlib[bcrypt]
@@ -12,6 +12,9 @@ httpx
 alembic
 bcrypt
 python-dotenv
-mangum
+gunicorn
+
+
+
 # Use this command to install the packages:
 # pip install -r requirements.txt

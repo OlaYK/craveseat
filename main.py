@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from authentication import auth as auth_routes
 from user_profile import routes as profile_routes
 from vendor_profile import routes as vendor_routes
@@ -16,6 +17,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# CORS Configuration for Production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://your-frontend-domain.com",
+        "*"  # Remove this in production, specify your frontend domain
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Include all routers
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(profile_routes.router, prefix="/profile", tags=["User Profile"])
@@ -31,5 +45,10 @@ def root():
     return {
         "message": "Welcome to CraveSeat API",
         "docs": "/docs",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "status": "running"
     }
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "platform": "render"}
