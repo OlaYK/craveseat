@@ -86,7 +86,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     }
     
 
-@router.post("/login/json", response_model=schemas.Token)
+@router.post("/login", response_model=schemas.Token)
 async def login_json(
     login_data: schemas.LoginRequest,
     db: Session = Depends(get_db)
