@@ -78,18 +78,24 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Create user with profile in one transaction
-    return crud.create_user_with_profile(db=db, user=user)
+    db_user = crud.create_user_with_profile(db, user=user)
+    return {
+        "message": "Sign up successful",
+        "username": created_user.username,
+        "email": created_user.email,
+        "user_type": created_user.user_type,
+        "success": True
+    }
     
 
-@router.post("/login", response_model=schemas.Token)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+
+@router.post("/login/json", response_model=schemas.Token)
+async def login_json(
+    login_data: schemas.LoginRequest,
+    db: Session = Depends(get_db)
 ):
-    """
-    OAuth2 compatible token login endpoint.
-    Use username and password to get an access token.
-    """
-    user = authenticate_user(db, form_data.username, form_data.password)
+    """Alternative JSON login endpoint (for convenience)"""
+    user = authenticate_user(db, login_data.username, login_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
