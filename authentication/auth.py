@@ -62,7 +62,7 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
 
 
 
-@router.post("/signup", response_model=schemas.User)
+@router.post("/signup", response_model=schemas.SignupResponse)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if user.password != user.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
@@ -81,13 +81,10 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.create_user_with_profile(db, user=user)
     return {
         "message": "Sign up successful",
-        "username": created_user.username,
-        "email": created_user.email,
-        "user_type": created_user.user_type,
-        "success": True
+        "success": True,
+        "user": db_user
     }
     
-
 
 @router.post("/login/json", response_model=schemas.Token)
 async def login_json(

@@ -87,3 +87,8 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class SignupResponse(BaseModel):
+    message: str
+    success: bool
+    user: User
