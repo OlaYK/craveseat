@@ -5,11 +5,12 @@ from cravings import crud as cravings_crud, schemas as cravings_schemas
 from responses import crud as responses_crud, schemas as responses_schemas
 from user_profile import crud as profile_crud
 from notifications import crud as notifications_crud
+from authentication import schemas as auth_schemas
 
 router = APIRouter()
 
 
-@router.get("/craving/{share_token}", response_model=cravings_schemas.CravingWithResponses)
+@router.get("/craving/{share_token}", response_model=auth_schemas.StandardResponse[cravings_schemas.CravingWithResponses])
 def view_shared_craving(share_token: str, db: Session = Depends(get_db)):
     """View a craving via share link (no authentication required)"""
     craving = db.query(cravings_crud.models.Craving).filter(
@@ -19,10 +20,14 @@ def view_shared_craving(share_token: str, db: Session = Depends(get_db)):
     if not craving:
         raise HTTPException(status_code=404, detail="Craving not found")
     
-    return craving
+    return {
+        "success": True,
+        "message": "Shared craving retrieved successfully",
+        "data": craving
+    }
 
 
-@router.post("/craving/{share_token}/respond", response_model=responses_schemas.ResponseOut)
+@router.post("/craving/{share_token}/respond", response_model=auth_schemas.StandardResponse[responses_schemas.ResponseOut])
 def respond_to_shared_craving(
     share_token: str,
     response: responses_schemas.ResponseCreate,
@@ -63,10 +68,14 @@ def respond_to_shared_craving(
         responder_name=responder_name
     )
     
-    return db_response
+    return {
+        "success": True,
+        "message": "Response submitted successfully",
+        "data": db_response
+    }
 
 
-@router.get("/profile/{user_id}")
+@router.get("/profile/{user_id}", response_model=auth_schemas.GenericResponse)
 def view_public_profile(user_id: str, db: Session = Depends(get_db)):
     """View public profile (limited info, no authentication required)"""
     from authentication import crud as auth_crud
@@ -78,11 +87,17 @@ def view_public_profile(user_id: str, db: Session = Depends(get_db)):
     profile = profile_crud.get_profile(db, user_id)
     
     # Return limited public info
-    return {
+    profile_data = {
         "username": user.username,
         "full_name": user.full_name,
         "bio": profile.bio if profile else None,
         "profile_image": profile.image_url if profile else None,
         "user_type": user.user_type.value,
         "created_at": user.created_at
+    }
+    
+    return {
+        "success": True,
+        "message": "Public profile retrieved successfully",
+        "data": profile_data
     }

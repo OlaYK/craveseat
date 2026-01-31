@@ -8,6 +8,8 @@ from pydantic import BaseModel
 
 from authentication import schemas, models, crud
 from database import get_db, engine, SessionLocal
+from vendor_profile.models import VendorProfile
+from user_profile.models import UserProfile
 
 
 router = APIRouter()
@@ -17,7 +19,7 @@ models.Base.metadata.create_all(bind=engine)
 
 SECRET_KEY = "e5a50e37f6c8c6733b341610b468e5a5f53e164c12f4eac4069586a544497d1e" 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080  
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
@@ -75,7 +77,7 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
     return current_user
 
 
-@router.post("/signup")
+@router.post("/signup", response_model=schemas.GenericResponse)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """
     Sign up a new user (JSON format)
@@ -126,7 +128,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/login")
+@router.post("/login", response_model=schemas.GenericResponse)
 def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Log in with username and password (JSON format)
@@ -202,7 +204,7 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/users/me")
+@router.get("/users/me", response_model=schemas.GenericResponse)
 async def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     """
     Get current user information
@@ -223,7 +225,7 @@ async def read_users_me(current_user: models.User = Depends(get_current_active_u
     }
 
 
-@router.put("/users/me/change-password")
+@router.put("/users/me/change-password", response_model=schemas.GenericResponse)
 def change_password(
     old_password: str,
     new_password: str,
@@ -253,7 +255,7 @@ def change_password(
     }
 
 
-@router.get("/users/{user_id}")
+@router.get("/users/{user_id}", response_model=schemas.GenericResponse)
 def read_user(
     user_id: str, 
     db: Session = Depends(get_db), 
@@ -281,5 +283,89 @@ def read_user(
             "full_name": db_user.full_name,
             "user_type": db_user.user_type.value,
             "is_active": db_user.is_active
+        }
+    }
+
+
+# Add to authentication/auth.py
+
+@router.post("/switch-role", response_model=schemas.GenericResponse)
+def switch_role(
+    target_role: str,  # "user" or "vendor"
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """
+    Switch between user and vendor roles
+    
+    Returns success message with new active role
+    """
+    # Validate target role
+    if target_role not in ["user", "vendor"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role. Must be 'user' or 'vendor'"
+        )
+    
+    # Check if user has the necessary profile
+    if target_role == "vendor":
+        vendor_profile = db.query(VendorProfile).filter(
+            VendorProfile.vendor_id == current_user.id
+        ).first()
+        
+        if not vendor_profile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You must create a vendor profile before switching to vendor mode. Visit /vendor to set up your vendor profile."
+            )
+    
+    if target_role == "user":
+        user_profile = db.query(UserProfile).filter(
+            UserProfile.user_id == current_user.id
+        ).first()
+        
+        if not user_profile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User profile not found"
+            )
+    
+    # Update user type and active role
+    if current_user.user_type != models.UserType.both:
+        current_user.user_type = models.UserType.both
+    
+    current_user.active_role = models.UserType.vendor if target_role == "vendor" else models.UserType.user
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "success": True,
+        "message": f"Successfully switched to {target_role} mode",
+        "data": {
+            "active_role": current_user.active_role.value,
+            "user_type": current_user.user_type.value,
+            "has_user_profile": bool(current_user.profile),
+            "has_vendor_profile": bool(current_user.vendor_profile)
+        }
+    }
+
+
+@router.get("/current-role", response_model=schemas.GenericResponse)
+def get_current_role(
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """
+    Get current active role and available roles
+    """
+    return {
+        "success": True,
+        "data": {
+            "active_role": current_user.active_role.value if current_user.active_role else current_user.user_type.value,
+            "user_type": current_user.user_type.value,
+            "has_user_profile": bool(current_user.profile),
+            "has_vendor_profile": bool(current_user.vendor_profile),
+            "can_switch_to_vendor": bool(current_user.vendor_profile),
+            "can_switch_to_user": bool(current_user.profile)
         }
     }

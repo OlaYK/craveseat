@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from authentication.auth import get_current_active_user
-from authentication import models as auth_models
+from authentication import models as auth_models, schemas as auth_schemas
 from database import get_db
 from cravings import crud, schemas
 from cloudinary_setup import upload_image
@@ -10,7 +10,7 @@ from cloudinary_setup import upload_image
 router = APIRouter()
 
 
-@router.post("/", response_model=schemas.CravingResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=auth_schemas.StandardResponse[schemas.CravingResponse], status_code=status.HTTP_201_CREATED)
 async def create_craving(
     title: str = Form(...),
     description: Optional[str] = Form(None),
@@ -47,10 +47,14 @@ async def create_craving(
     )
     
     db_craving = crud.create_craving(db, current_user.id, craving_data, image_url)
-    return db_craving
+    return {
+        "success": True,
+        "message": "Craving created successfully",
+        "data": db_craving
+    }
 
 
-@router.get("/{craving_id}/share-url")
+@router.get("/{craving_id}/share-url", response_model=auth_schemas.GenericResponse)
 def get_share_url(
     craving_id: str,
     db: Session = Depends(get_db),
@@ -69,13 +73,16 @@ def get_share_url(
     share_url = f"{base_url}/{db_craving.share_token}"
     
     return {
-        "share_token": db_craving.share_token,
-        "share_url": share_url,
-        "message": "Share this link with anyone to let them view and respond to your craving!"
+        "success": True,
+        "message": "Share this link with anyone to let them view and respond to your craving!",
+        "data": {
+            "share_token": db_craving.share_token,
+            "share_url": share_url
+        }
     }
 
 
-@router.post("/{craving_id}/upload-image", response_model=schemas.CravingResponse)
+@router.post("/{craving_id}/upload-image", response_model=auth_schemas.StandardResponse[schemas.CravingResponse])
 async def upload_craving_image(
     craving_id: str,
     file: UploadFile = File(...),
@@ -98,12 +105,16 @@ async def upload_craving_image(
         updated_craving = crud.update_craving(
             db, craving_id, schemas.CravingUpdate(image_url=image_url)
         )
-        return updated_craving
+        return {
+            "success": True,
+            "message": "Craving image uploaded successfully",
+            "data": updated_craving
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
 
-@router.get("/", response_model=List[schemas.CravingResponse])
+@router.get("/", response_model=auth_schemas.StandardResponse[List[schemas.CravingResponse]])
 def list_cravings(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -113,10 +124,15 @@ def list_cravings(
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
     """Get all cravings with optional filters"""
-    return crud.get_cravings(db, skip=skip, limit=limit, status=status, category=category)
+    cravings = crud.get_cravings(db, skip=skip, limit=limit, status=status, category=category)
+    return {
+        "success": True,
+        "message": "Cravings retrieved successfully",
+        "data": cravings
+    }
 
 
-@router.get("/my-cravings", response_model=List[schemas.CravingResponse])
+@router.get("/my-cravings", response_model=auth_schemas.StandardResponse[List[schemas.CravingResponse]])
 def list_my_cravings(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -124,10 +140,15 @@ def list_my_cravings(
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
     """Get current user's cravings"""
-    return crud.get_user_cravings(db, current_user.id, skip=skip, limit=limit)
+    my_cravings = crud.get_user_cravings(db, current_user.id, skip=skip, limit=limit)
+    return {
+        "success": True,
+        "message": "Your cravings retrieved successfully",
+        "data": my_cravings
+    }
 
 
-@router.get("/{craving_id}", response_model=schemas.CravingWithResponses)
+@router.get("/{craving_id}", response_model=auth_schemas.StandardResponse[schemas.CravingWithResponses])
 def get_craving(
     craving_id: str,
     db: Session = Depends(get_db),
@@ -137,10 +158,14 @@ def get_craving(
     db_craving = crud.get_craving(db, craving_id)
     if not db_craving:
         raise HTTPException(status_code=404, detail="Craving not found")
-    return db_craving
+    return {
+        "success": True,
+        "message": "Craving retrieved successfully",
+        "data": db_craving
+    }
 
 
-@router.put("/{craving_id}", response_model=schemas.CravingResponse)
+@router.put("/{craving_id}", response_model=auth_schemas.StandardResponse[schemas.CravingResponse])
 def update_craving(
     craving_id: str,
     craving_update: schemas.CravingUpdate,
@@ -156,10 +181,14 @@ def update_craving(
         raise HTTPException(status_code=403, detail="Not authorized to modify this craving")
     
     updated_craving = crud.update_craving(db, craving_id, craving_update)
-    return updated_craving
+    return {
+        "success": True,
+        "message": "Craving updated successfully",
+        "data": updated_craving
+    }
 
 
-@router.delete("/{craving_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{craving_id}", response_model=auth_schemas.GenericResponse)
 def delete_craving(
     craving_id: str,
     db: Session = Depends(get_db),
@@ -176,4 +205,7 @@ def delete_craving(
     success = crud.delete_craving(db, craving_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete craving")
-    return None
+    return {
+        "success": True,
+        "message": "Craving deleted successfully"
+    }

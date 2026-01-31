@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
 from authentication.auth import get_current_active_user
-from authentication import models as auth_models
+from authentication import models as auth_models, schemas as auth_schemas
 from database import get_db
 from responses import crud, schemas
 from cravings import crud as cravings_crud
@@ -10,7 +10,7 @@ from cravings import crud as cravings_crud
 router = APIRouter()
 
 
-@router.post("/", response_model=schemas.ResponseOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=auth_schemas.StandardResponse[schemas.ResponseOut], status_code=status.HTTP_201_CREATED)
 def create_response(
     craving_id: str,
     response: schemas.ResponseCreate,
@@ -45,10 +45,14 @@ def create_response(
         responder_name=responder_name
     )
     
-    return db_response
+    return {
+        "success": True,
+        "message": "Response created successfully",
+        "data": db_response
+    }
 
 
-@router.get("/craving/{craving_id}", response_model=List[schemas.ResponseOut])
+@router.get("/craving/{craving_id}", response_model=auth_schemas.StandardResponse[List[schemas.ResponseOut]])
 def list_craving_responses(
     craving_id: str,
     db: Session = Depends(get_db),
@@ -60,10 +64,15 @@ def list_craving_responses(
     if not db_craving:
         raise HTTPException(status_code=404, detail="Craving not found")
     
-    return crud.get_craving_responses(db, craving_id)
+    responses = crud.get_craving_responses(db, craving_id)
+    return {
+        "success": True,
+        "message": "Craving responses retrieved successfully",
+        "data": responses
+    }
 
 
-@router.get("/my-responses", response_model=List[schemas.ResponseOut])
+@router.get("/my-responses", response_model=auth_schemas.StandardResponse[List[schemas.ResponseOut]])
 def list_my_responses(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -71,10 +80,15 @@ def list_my_responses(
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
     """Get current user's responses"""
-    return crud.get_user_responses(db, current_user.id, skip=skip, limit=limit)
+    my_responses = crud.get_user_responses(db, current_user.id, skip=skip, limit=limit)
+    return {
+        "success": True,
+        "message": "Your responses retrieved successfully",
+        "data": my_responses
+    }
 
 
-@router.get("/{response_id}", response_model=schemas.ResponseOut)
+@router.get("/{response_id}", response_model=auth_schemas.StandardResponse[schemas.ResponseOut])
 def get_response(
     response_id: str,
     db: Session = Depends(get_db),
@@ -84,10 +98,14 @@ def get_response(
     db_response = crud.get_response(db, response_id)
     if not db_response:
         raise HTTPException(status_code=404, detail="Response not found")
-    return db_response
+    return {
+        "success": True,
+        "message": "Response retrieved successfully",
+        "data": db_response
+    }
 
 
-@router.put("/{response_id}", response_model=schemas.ResponseOut)
+@router.put("/{response_id}", response_model=auth_schemas.StandardResponse[schemas.ResponseOut])
 def update_response(
     response_id: str,
     response_update: schemas.ResponseUpdate,
@@ -110,10 +128,14 @@ def update_response(
         raise HTTPException(status_code=403, detail="Only craving owner can change response status")
     
     updated_response = crud.update_response(db, response_id, response_update)
-    return updated_response
+    return {
+        "success": True,
+        "message": "Response updated successfully",
+        "data": updated_response
+    }
 
 
-@router.delete("/{response_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{response_id}", response_model=auth_schemas.GenericResponse)
 def delete_response(
     response_id: str,
     db: Session = Depends(get_db),
@@ -130,4 +152,7 @@ def delete_response(
     success = crud.delete_response(db, response_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete response")
-    return None
+    return {
+        "success": True,
+        "message": "Response deleted successfully"
+    }

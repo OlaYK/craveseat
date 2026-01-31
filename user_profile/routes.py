@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from authentication.auth import get_current_active_user
-from authentication import crud as auth_crud, models as auth_models
+from authentication import crud as auth_crud, models as auth_models, schemas as auth_schemas
 from database import get_db
 from user_profile import crud, schemas
 from cloudinary_setup import upload_image
@@ -9,7 +9,7 @@ from cloudinary_setup import upload_image
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.UserProfile)
+@router.get("/", response_model=auth_schemas.StandardResponse[schemas.UserProfile])
 def get_profile(
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
@@ -33,10 +33,14 @@ def get_profile(
         "updated_at": db_profile.updated_at if db_profile else current_user.updated_at,
     }
     
-    return profile_data
+    return {
+        "success": True,
+        "message": "Profile retrieved successfully",
+        "data": profile_data
+    }
 
 
-@router.patch("/", response_model=schemas.UserProfile)
+@router.patch("/", response_model=auth_schemas.StandardResponse[schemas.UserProfile])
 def update_profile(
     profile_update: schemas.UserProfileUpdate,
     db: Session = Depends(get_db),
@@ -71,10 +75,14 @@ def update_profile(
         "updated_at": updated_profile.updated_at,
     }
     
-    return profile_data
+    return {
+        "success": True,
+        "message": "Profile updated successfully",
+        "data": profile_data
+    }
 
 
-@router.post("/upload-image", response_model=schemas.UserProfile)
+@router.post("/upload-image", response_model=auth_schemas.StandardResponse[schemas.UserProfile])
 async def upload_profile_image(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -111,13 +119,17 @@ async def upload_profile_image(
             "updated_at": updated_profile.updated_at,
         }
         
-        return profile_data
+        return {
+            "success": True,
+            "message": "Profile image uploaded successfully",
+            "data": profile_data
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
 
-@router.post("/change-password")
+@router.post("/change-password", response_model=auth_schemas.GenericResponse)
 def change_password(
     request: schemas.ChangePasswordRequest,
     db: Session = Depends(get_db),
@@ -132,4 +144,7 @@ def change_password(
     user.hashed_password = auth_crud.get_password_hash(request.new_password)
     db.commit()
     db.refresh(user)
-    return {"msg": "Password updated successfully"}
+    return {
+        "success": True,
+        "message": "Password updated successfully"
+    }

@@ -1,7 +1,9 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional
+from typing import Optional, Generic, TypeVar, Any
 import re
-from .models import UserType    
+from .models import UserType
+
+T = TypeVar("T")
 
 
 #user schemas
@@ -88,7 +90,12 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
-class SignupResponse(BaseModel):
-    message: str
+class GenericResponse(BaseModel):
     success: bool
-    user: User
+    message: str
+    data: Optional[Any] = None
+
+class StandardResponse(BaseModel, Generic[T]):
+    success: bool
+    message: str
+    data: Optional[T] = None
