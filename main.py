@@ -43,12 +43,22 @@ app.include_router(public_routes.router, prefix="/public", tags=["Public Access"
 @app.get("/")
 def root():
     return {
+        "success": True,
         "message": "Welcome to CraveSeat API",
-        "docs": "/docs",
-        "version": "1.0.0",
-        "status": "running"
+        "data": {
+            "docs": "/docs",
+            "version": "1.0.0",
+            "status": "running"
+        }
     }
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "platform": "render"}
+    return {
+        "success": True,
+        "message": "System is healthy",
+        "data": {
+            "status": "healthy",
+            "platform": "render"
+        }
+    }
