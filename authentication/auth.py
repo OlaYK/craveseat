@@ -121,9 +121,21 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
         "success": True,
         "message": "Sign up successful",
         "data": {
-            "username": created_user.username,
-            "email": created_user.email,
-            "user_type": created_user.user_type.value
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": created_user.id,
+                "username": created_user.username,
+                "email": created_user.email,
+                "full_name": created_user.full_name,
+                "user_type": created_user.user_type.value,
+                "is_active": created_user.is_active,
+                "active_role": created_user.active_role.value if created_user.active_role else created_user.user_type.value,
+                "bio": created_user.profile.bio if created_user.profile else None,
+                "phone_number": created_user.profile.phone_number if created_user.profile else None,
+                "delivery_address": created_user.profile.delivery_address if created_user.profile else None,
+                "image_url": created_user.profile.image_url if created_user.profile else None,
+            }
         }
     }
 
@@ -162,11 +174,23 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         "success": True,
         "message": "Log in successful",
         "data": {
-            "username": user.username,
-            "email": user.email,
-            "user_type": user.user_type.value,
             "access_token": access_token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+                "user_type": user.user_type.value,
+                "is_active": user.is_active,
+                "active_role": user.active_role.value if user.active_role else user.user_type.value,
+                "bio": user.profile.bio if user.profile else None,
+                "phone_number": user.profile.phone_number if user.profile else None,
+                "delivery_address": user.profile.delivery_address if user.profile else None,
+                "image_url": user.profile.image_url if user.profile else None,
+                "created_at": user.created_at,
+                "updated_at": user.updated_at,
+            }
         }
     }
 
@@ -220,7 +244,14 @@ async def read_users_me(current_user: models.User = Depends(get_current_active_u
             "email": current_user.email,
             "full_name": current_user.full_name,
             "user_type": current_user.user_type.value,
-            "is_active": current_user.is_active
+            "is_active": current_user.is_active,
+            "active_role": current_user.active_role.value if current_user.active_role else current_user.user_type.value,
+            "bio": current_user.profile.bio if current_user.profile else None,
+            "phone_number": current_user.profile.phone_number if current_user.profile else None,
+            "delivery_address": current_user.profile.delivery_address if current_user.profile else None,
+            "image_url": current_user.profile.image_url if current_user.profile else None,
+            "created_at": current_user.created_at,
+            "updated_at": current_user.updated_at,
         }
     }
 
@@ -282,7 +313,14 @@ def read_user(
             "email": db_user.email,
             "full_name": db_user.full_name,
             "user_type": db_user.user_type.value,
-            "is_active": db_user.is_active
+            "is_active": db_user.is_active,
+            "active_role": db_user.active_role.value if db_user.active_role else db_user.user_type.value,
+            "bio": db_user.profile.bio if db_user.profile else None,
+            "phone_number": db_user.profile.phone_number if db_user.profile else None,
+            "delivery_address": db_user.profile.delivery_address if db_user.profile else None,
+            "image_url": db_user.profile.image_url if db_user.profile else None,
+            "created_at": db_user.created_at,
+            "updated_at": db_user.updated_at,
         }
     }
 

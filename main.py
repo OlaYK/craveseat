@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from authentication import auth as auth_routes
 from user_profile import routes as profile_routes
 from vendor_profile import routes as vendor_routes
@@ -17,7 +20,51 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Configuration for Production
+# --- Exception Handlers ---
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": exc.detail,
+            "data": None
+        },
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Format the validation error message
+    errors = exc.errors()
+    if errors:
+        # Try to create a readable error message from the first error
+        error = errors[0]
+        msg = f"Validation error: {error.get('msg')} at {'.'.join(str(loc) for loc in error.get('loc'))}"
+    else:
+        msg = "Validation error"
+        
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": msg,
+            "data": errors # Include full errors in data for debugging/frontend help
+        },
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "An unexpected error occurred. Please try again later.",
+            "data": str(exc) if app.debug else None
+        },
+    )
+
+# --- Middleware ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
