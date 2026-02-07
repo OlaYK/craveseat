@@ -87,7 +87,7 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 class LoginRequest(BaseModel):
-    username: str
+    email_or_username: str
     password: str
 
 class GenericResponse(BaseModel):

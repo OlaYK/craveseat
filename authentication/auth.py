@@ -26,7 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 # JSON Login Schema
 class LoginRequest(BaseModel):
-    username: str
+    email_or_username: str
     password: str
 
 
@@ -38,9 +38,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def authenticate_user(db: Session, username: str, password: str):
+def authenticate_user(db: Session, identifier: str, password: str):
     # Convert to lowercase for case-insensitive login
-    user = crud.get_user_by_username(db, username.lower())
+    identifier = identifier.lower().strip()
+    
+    # Try username first
+    user = crud.get_user_by_username(db, identifier)
+    
+    # If not found, try email
+    if not user:
+        user = crud.get_user_by_email(db, identifier)
+        
     if not user:
         return None
     if not crud.verify_password(password, user.hashed_password):
@@ -143,16 +151,16 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=schemas.GenericResponse)
 def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     """
-    Log in with username and password (JSON format)
+    Log in with email/username and password (JSON format)
     
     Returns success message with access token
     """
-    user = authenticate_user(db, login_data.username, login_data.password)
+    user = authenticate_user(db, login_data.email_or_username, login_data.password)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email/username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -210,7 +218,7 @@ async def login_for_access_token(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect email/username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
