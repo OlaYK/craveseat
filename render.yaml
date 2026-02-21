@@ -2,7 +2,7 @@ services:
   - type: web
     name: craveseat-api
     runtime: python
-    region: frankfurt # Better latency for Nigeria than Oregon
+    region: frankfurt 
     plan: free
     branch: main
     buildCommand: pip install -r requirements.txt
@@ -11,9 +11,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: craveseat-db
-          property: connectionString
+        sync: false 
       - key: CLOUDINARY_URL
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
@@ -23,11 +21,6 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: SECRET_KEY
-        generateValue: true # Automatically generate a secret key if not provided
+        generateValue: true
       - key: GOOGLE_CLIENT_ID
         sync: false
-
-databases:
-  - name: craveseat-db
-    plan: free
-    region: frankfurt
