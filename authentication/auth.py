@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "e5a50e37f6c8c6733b341610b468e5a5f53e164c12
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080")) 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token-swagger")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -248,40 +248,15 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/token", response_model=schemas.Token)
-async def login_for_access_token(
-    request: Request,
+def login_for_access_token(
+    login_data: schemas.LoginRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Hybrid token endpoint. Supports both JSON (app) and Form Data (Swagger UI).
+    Token endpoint using JSON payload (Recommended for apps/Postman).
     """
-    content_type = request.headers.get("Content-Type", "")
-    username = None
-    password = None
-
-    if "application/json" in content_type:
-        try:
-            data = await request.json()
-            username = data.get("email_or_username") or data.get("username")
-            password = data.get("password")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid JSON payload")
-    else:
-        # Fallback to form data (Standard for Swagger UI)
-        try:
-            form_data = await request.form()
-            username = form_data.get("username")
-            password = form_data.get("password")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid form data")
-
-    if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username/Email and password are required"
-        )
-
-    user = authenticate_user(db, username, password)
+    user = authenticate_user(db, login_data.email_or_username, login_data.password)
+    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -293,6 +268,30 @@ async def login_for_access_token(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled"
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, 
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/token-swagger", response_model=schemas.Token, include_in_schema=False)
+def login_for_access_token_swagger(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """
+    Hidden endpoint specifically for Swagger UI's "Authorize" button (Form Data).
+    """
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email/username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
