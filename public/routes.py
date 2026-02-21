@@ -10,6 +10,10 @@ from authentication import schemas as auth_schemas
 router = APIRouter()
 
 
+def _status_value(status):
+    return status.value if hasattr(status, "value") else status
+
+
 @router.get("/craving/{share_token}", response_model=auth_schemas.StandardResponse[cravings_schemas.CravingWithResponses])
 def view_shared_craving(share_token: str, db: Session = Depends(get_db)):
     """View a craving via share link (no authentication required)"""
@@ -43,7 +47,7 @@ def respond_to_shared_craving(
         raise HTTPException(status_code=404, detail="Craving not found")
     
     # Check if craving is still open
-    if craving.status != "open":
+    if _status_value(craving.status) != "open":
         raise HTTPException(status_code=400, detail="Craving is no longer accepting responses")
     
     # Validate anonymous response requirements

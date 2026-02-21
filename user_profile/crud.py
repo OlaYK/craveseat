@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 import hashlib
 from user_profile import models, schemas
+from authentication import models as auth_models
 
 
 # Configure password hashing with SHA256 pre-hashing
@@ -48,16 +49,39 @@ def create_profile(db: Session, user_id: str, bio: str = None, phone_number: str
 
 
 def update_profile(db: Session, user_id: str, profile_update: schemas.UserProfileUpdate):
-    """Update profile - creates if doesn't exist"""
+    """Update profile and username (stored on User table)."""
+    user = db.query(auth_models.User).filter(auth_models.User.id == user_id).first()
+    if not user:
+        return None
+
     profile = get_profile(db, user_id)
-    
+
+    update_data = profile_update.model_dump(exclude_unset=True)
+
+    # Username and full_name live on auth_models.User, not UserProfile.
+    new_username = update_data.pop("username", None)
+    new_full_name = update_data.pop("full_name", None)
+
+    if new_username is not None:
+        normalized_username = new_username.lower().strip()
+        existing_user = db.query(auth_models.User).filter(
+            auth_models.User.username == normalized_username,
+            auth_models.User.id != user_id
+        ).first()
+        if existing_user:
+            raise ValueError("Username already taken")
+        user.username = normalized_username
+        
+    if new_full_name is not None:
+        user.full_name = new_full_name.strip() if new_full_name else None
+
     if not profile:
-        # Create new profile if it doesn't exist
-        profile = models.UserProfile(user_id=user_id)
+        phone_number = update_data.get("phone_number")
+        if not phone_number:
+            raise ValueError("Phone number is required to create a profile")
+        profile = models.UserProfile(user_id=user_id, phone_number=phone_number)
         db.add(profile)
 
-    # Update only fields that were provided
-    update_data = profile_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(profile, field, value)
 

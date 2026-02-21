@@ -44,7 +44,7 @@ def update_response(db: Session, response_id: str, response_update: schemas.Resp
     if not db_response:
         return None
     
-    for key, value in response_update.dict(exclude_unset=True).items():
+    for key, value in response_update.model_dump(exclude_unset=True).items():
         setattr(db_response, key, value)
     
     db.commit()

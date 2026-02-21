@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from authentication.auth import get_current_active_user
@@ -10,43 +10,28 @@ from cloudinary_setup import upload_image
 router = APIRouter()
 
 
+@router.get("/categories", response_model=auth_schemas.GenericResponse)
+def get_craving_categories():
+    """Get all available craving categories for dropdowns"""
+    categories = [
+        {"id": cat.value, "name": cat.value.replace("_", " ").title()}
+        for cat in schemas.CravingCategory
+    ]
+    return {
+        "success": True,
+        "message": "Categories retrieved successfully",
+        "data": categories
+    }
+
+
 @router.post("/", response_model=auth_schemas.StandardResponse[schemas.CravingResponse], status_code=status.HTTP_201_CREATED)
-async def create_craving(
-    title: str = Form(...),
-    description: Optional[str] = Form(None),
-    category: str = Form(...),
-    anonymous: Optional[bool] = Form(False),
-    delivery_address: Optional[str] = Form(None),
-    recommended_vendor: Optional[str] = Form(None),
-    vendor_contact: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None),
+def create_craving(
+    craving: schemas.CravingCreate,
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
-    """Create a new craving with optional image upload"""
-    
-    # Upload image if provided
-    image_url = None
-    if image:
-        try:
-            image_url = await upload_image(image, folder="cravings")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
-    
-    # Create craving object
-    craving_data = schemas.CravingCreate(
-        title=title,
-        description=description,
-        category=category,
-        anonymous=anonymous,
-        delivery_address=delivery_address,
-        recommended_vendor=recommended_vendor,
-        vendor_contact=vendor_contact,
-        notes=notes,
-    )
-    
-    db_craving = crud.create_craving(db, current_user.id, craving_data, image_url)
+    """Create a new craving using JSON payload."""
+    db_craving = crud.create_craving(db, current_user.id, craving)
     return {
         "success": True,
         "message": "Craving created successfully",

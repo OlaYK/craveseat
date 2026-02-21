@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from authentication import auth as auth_routes
 from user_profile import routes as profile_routes
@@ -26,11 +27,11 @@ app = FastAPI(
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={
+        content=jsonable_encoder({
             "success": False,
             "message": exc.detail,
             "data": None
-        },
+        }),
     )
 
 @app.exception_handler(RequestValidationError)
@@ -46,22 +47,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         
     return JSONResponse(
         status_code=422,
-        content={
+        content=jsonable_encoder({
             "success": False,
             "message": msg,
             "data": errors # Include full errors in data for debugging/frontend help
-        },
+        }),
     )
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
-        content={
+        content=jsonable_encoder({
             "success": False,
             "message": "An unexpected error occurred. Please try again later.",
             "data": str(exc) if app.debug else None
-        },
+        }),
     )
 
 # --- Middleware ---

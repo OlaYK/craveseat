@@ -13,11 +13,17 @@ class CravingStatus(PyEnum):
 
 
 class CravingCategory(PyEnum):
-    food = "food"
+    local_delicacies = "local_delicacies"
+    continental = "continental"
+    street_food = "street_food"
+    desserts = "desserts"
     beverages = "beverages"
     snacks = "snacks"
-    groceries = "groceries"
-    bakery = "bakery"
+    healthy = "healthy"
+    breakfast = "breakfast"
+    night_cravings = "night_cravings"
+    seafood = "seafood"
+    grills = "grills"
     fast_food = "fast_food"
     other = "other"
 
@@ -28,17 +34,20 @@ class Craving(Base):
     id = Column(String, primary_key=True, default=shortuuid.uuid, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     
-    title = Column(String(200), nullable=False)
+    # Keep legacy DB column names for compatibility while exposing new API field names.
+    name = Column("title", String(200), nullable=False)
     description = Column(Text, nullable=True)
     category = Column(SAEnum(CravingCategory), nullable=False)
     status = Column(SAEnum(CravingStatus), default=CravingStatus.open, nullable=False)
     
-    anonymous = Column(Boolean, default=False)
+    price_estimate = Column(String, nullable=True) # Using String for flexibility (e.g., "500-1000") or Numeric if strictly currency.
+    # The user said "add price estimate", String allows ranges like "$10 - $20" or "N5000".
+    
     image_url = Column(String, nullable=True)
     delivery_address = Column(Text, nullable=True)
     
     recommended_vendor = Column(String, nullable=True)
-    vendor_contact = Column(String, nullable=True)
+    vendor_link = Column("vendor_contact", String, nullable=True)
     share_token = Column(String, unique=True, nullable=False, default=shortuuid.uuid, index=True)  # For share URLs
     notes = Column(Text, nullable=True)
     

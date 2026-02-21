@@ -11,7 +11,7 @@ class UserBase(BaseModel):
     username: str
     email: EmailStr  # Changed to EmailStr for validation
     full_name: Optional[str] = None
-    disabled: Optional[bool] = None
+    disabled: bool = False
     user_type: Optional[UserType] = UserType.user
     
     @field_validator('username')
@@ -89,6 +89,38 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     email_or_username: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+    phone_number: Optional[str] = None
+    
+    @field_validator('phone_number')
+    @classmethod
+    def validate_optional_phone_number(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v.strip() == "":
+            return None
+        
+        cleaned = re.sub(r'[\s\-\(\)\.]', '', v)
+        if cleaned.startswith('+'):
+            cleaned = cleaned[1:]
+        
+        if not cleaned.isdigit():
+            raise ValueError('Phone number must contain only digits, spaces, hyphens, parentheses, or start with +')
+        
+        if len(cleaned) < 10 or len(cleaned) > 15:
+            raise ValueError('Phone number must be between 10 and 15 digits')
+        
+        return v.strip()
+
+
+class SwitchRoleRequest(BaseModel):
+    target_role: str
 
 class GenericResponse(BaseModel):
     success: bool

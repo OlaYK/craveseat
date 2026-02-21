@@ -6,15 +6,15 @@ from datetime import datetime
 def create_craving(db: Session, user_id: str, craving: schemas.CravingCreate, image_url: str = None):
     db_craving = models.Craving(
         user_id=user_id,
-        title=craving.title,
+        name=craving.name,
         description=craving.description,
         category=craving.category,
-        anonymous=craving.anonymous,
+        price_estimate=craving.price_estimate,
         delivery_address=craving.delivery_address,
         recommended_vendor=craving.recommended_vendor,
-        vendor_contact=craving.vendor_contact,
+        vendor_link=craving.vendor_link,
         notes=craving.notes,
-        image_url=image_url
+        image_url=image_url or craving.image_url
     )
     db.add(db_craving)
     db.commit()
@@ -48,7 +48,7 @@ def update_craving(db: Session, craving_id: str, craving_update: schemas.Craving
     if not db_craving:
         return None
     
-    for key, value in craving_update.dict(exclude_unset=True).items():
+    for key, value in craving_update.model_dump(exclude_unset=True).items():
         setattr(db_craving, key, value)
     
     # If status is being changed to fulfilled, set fulfilled_at

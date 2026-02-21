@@ -49,12 +49,19 @@ def update_profile(
     """
     Update user profile including:
     - username (must be unique)
+    - full_name
     - phone_number (validated format)
     - bio
     - delivery_address
     - image_url
     """
-    updated_profile = crud.update_profile(db, current_user.id, profile_update)
+    try:
+        updated_profile = crud.update_profile(db, current_user.id, profile_update)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not updated_profile:
+        raise HTTPException(status_code=404, detail="User not found")
     
     # Refresh user to get updated username if it was changed
     db.refresh(current_user)

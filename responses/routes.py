@@ -10,6 +10,10 @@ from cravings import crud as cravings_crud
 router = APIRouter()
 
 
+def _status_value(status):
+    return status.value if hasattr(status, "value") else status
+
+
 @router.post("/", response_model=auth_schemas.StandardResponse[schemas.ResponseOut], status_code=status.HTTP_201_CREATED)
 def create_response(
     craving_id: str,
@@ -28,7 +32,7 @@ def create_response(
         raise HTTPException(status_code=400, detail="Cannot respond to your own craving")
     
     # Check if craving is still open
-    if db_craving.status != "open":
+    if _status_value(db_craving.status) != "open":
         raise HTTPException(status_code=400, detail="Craving is no longer accepting responses")
     
     # Create response (user_id is provided but can be hidden if is_anonymous=True)
@@ -121,10 +125,10 @@ def update_response(
     db_craving = cravings_crud.get_craving(db, db_response.craving_id)
     
     # Only the response creator can edit message, craving owner can change status
-    if response_update.message and db_response.user_id != current_user.id:
+    if response_update.message is not None and db_response.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this response message")
     
-    if response_update.status and db_craving.user_id != current_user.id:
+    if response_update.status is not None and db_craving.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only craving owner can change response status")
     
     updated_response = crud.update_response(db, response_id, response_update)

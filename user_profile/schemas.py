@@ -13,6 +13,7 @@ class UserProfileBase(BaseModel):
 class UserProfileUpdate(UserProfileBase):
     """Update profile - all fields optional"""
     username: Optional[str] = None
+    full_name: Optional[str] = None
     image_url: Optional[str] = None
     bio: Optional[str] = None
     phone_number: Optional[str] = None

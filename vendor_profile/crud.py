@@ -35,7 +35,7 @@ def update_vendor_profile(db: Session, vendor_id: str, profile_update: schemas.V
     if not db_profile:
         return None
 
-    for key, value in profile_update.dict(exclude_unset=True).items():
+    for key, value in profile_update.model_dump(exclude_unset=True).items():
         setattr(db_profile, key, value)
 
     db.commit()

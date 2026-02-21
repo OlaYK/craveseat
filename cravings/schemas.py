@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -12,40 +12,65 @@ class CravingStatus(str, Enum):
 
 
 class CravingCategory(str, Enum):
-    food = "food"
+    local_delicacies = "local_delicacies"
+    continental = "continental"
+    street_food = "street_food"
+    desserts = "desserts"
     beverages = "beverages"
     snacks = "snacks"
-    groceries = "groceries"
-    bakery = "bakery"
+    healthy = "healthy"
+    breakfast = "breakfast"
+    night_cravings = "night_cravings"
+    seafood = "seafood"
+    grills = "grills"
     fast_food = "fast_food"
     other = "other"
 
 
 class CravingBase(BaseModel):
-    title: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(
+        validation_alias=AliasChoices("name", "title"),
+        serialization_alias="name",
+    )
     description: Optional[str] = None
     category: CravingCategory
-    anonymous: Optional[bool] = False
+    price_estimate: Optional[str] = None
     delivery_address: Optional[str] = None
     recommended_vendor: Optional[str] = None
-    vendor_contact: Optional[str] = None
+    vendor_link: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("vendor_link", "vendor_contact"),
+        serialization_alias="vendor_link",
+    )
     notes: Optional[str] = None
 
 
 class CravingCreate(CravingBase):
-    """Create craving with optional image_url from multipart upload"""
-    pass
+    """Create craving with optional image URL."""
+    image_url: Optional[str] = None
 
 
 class CravingUpdate(BaseModel):
-    title: Optional[str] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("name", "title"),
+        serialization_alias="name",
+    )
     description: Optional[str] = None
     category: Optional[CravingCategory] = None
     status: Optional[CravingStatus] = None
-    anonymous: Optional[bool] = None
+    price_estimate: Optional[str] = None
     delivery_address: Optional[str] = None
     recommended_vendor: Optional[str] = None
-    vendor_contact: Optional[str] = None
+    vendor_link: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("vendor_link", "vendor_contact"),
+        serialization_alias="vendor_link",
+    )
     notes: Optional[str] = None
     image_url: Optional[str] = None
 
