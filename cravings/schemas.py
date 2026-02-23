@@ -1,5 +1,6 @@
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from typing import Optional, List
+from decimal import Decimal
 from datetime import datetime
 from enum import Enum
 
@@ -33,7 +34,7 @@ class CravingBase(BaseModel):
     )
     description: Optional[str] = None
     category: CravingCategory
-    price_estimate: Optional[str] = None
+    price_estimate: Optional[Decimal] = None
     delivery_address: Optional[str] = None
     recommended_vendor: Optional[str] = None
     vendor_link: Optional[str] = Field(
@@ -60,7 +61,7 @@ class CravingUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[CravingCategory] = None
     status: Optional[CravingStatus] = None
-    price_estimate: Optional[str] = None
+    price_estimate: Optional[Decimal] = None
     delivery_address: Optional[str] = None
     recommended_vendor: Optional[str] = None
     vendor_link: Optional[str] = Field(

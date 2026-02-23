@@ -32,6 +32,10 @@ def upgrade() -> None:
     
     # Drop the old type
     op.execute("DROP TYPE cravingcategory_old")
+    
+    # Add missing columns
+    op.add_column('cravings', sa.Column('price_estimate', sa.String(), nullable=True))
+    op.drop_column('cravings', 'anonymous')
 
 
 def downgrade() -> None:

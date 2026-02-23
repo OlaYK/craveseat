@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Boolean, ForeignKey, DateTime, Enum as SAEnum, func
+from sqlalchemy import Column, String, Text, Boolean, ForeignKey, DateTime, Enum as SAEnum, func, Numeric
 from sqlalchemy.orm import relationship
 from database import Base
 import shortuuid
@@ -35,14 +35,10 @@ class Craving(Base):
     name = Column("title", String(200), nullable=False)
     description = Column(Text, nullable=True)
     category = Column(SAEnum(CravingCategory), nullable=False)
-    status = Column(SAEnum(CravingStatus), default=CravingStatus.open, nullable=False)
-    
-    price_estimate = Column(String, nullable=True) # Using String for flexibility (e.g., "500-1000") or Numeric if strictly currency.
-    # The user said "add price estimate", String allows ranges like "$10 - $20" or "N5000".
-    
+    status = Column(SAEnum(CravingStatus), default=CravingStatus.open, nullable=False)    
+    price_estimate = Column(Numeric(10, 2), nullable=True)    
     image_url = Column(String, nullable=True)
-    delivery_address = Column(Text, nullable=True)
-    
+    delivery_address = Column(Text, nullable=True)    
     recommended_vendor = Column(String, nullable=True)
     vendor_link = Column("vendor_contact", String, nullable=True)
     share_token = Column(String, unique=True, nullable=False, default=shortuuid.uuid, index=True)  # For share URLs

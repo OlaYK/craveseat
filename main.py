@@ -12,6 +12,13 @@ from responses import routes as responses_routes
 from notifications import routes as notifications_routes
 from public import routes as public_routes
 from database import engine, Base
+# Import all models to ensure they are registered with Base before create_all
+from authentication.models import User
+from user_profile.models import UserProfile
+from vendor_profile.models import VendorProfile
+from cravings.models import Craving
+from responses.models import Response
+from notifications.models import Notification
 
 Base.metadata.create_all(bind=engine)
 
@@ -56,6 +63,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    # Log the error for debugging
+    print(f"ERROR: {str(exc)}")
+    import traceback
+    traceback.print_exc()
+    
     return JSONResponse(
         status_code=500,
         content=jsonable_encoder({
