@@ -70,8 +70,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://your-frontend-domain.com",
-        "*"  # Remove this in production, specify your frontend domain
+        "http://127.0.0.1:3000",
+        "https://craveseat.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

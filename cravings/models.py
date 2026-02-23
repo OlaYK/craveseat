@@ -13,18 +13,15 @@ class CravingStatus(PyEnum):
 
 
 class CravingCategory(PyEnum):
-    local_delicacies = "local_delicacies"
-    continental = "continental"
-    street_food = "street_food"
-    desserts = "desserts"
-    beverages = "beverages"
+    food = "food"
     snacks = "snacks"
-    healthy = "healthy"
-    breakfast = "breakfast"
-    night_cravings = "night_cravings"
-    seafood = "seafood"
-    grills = "grills"
-    fast_food = "fast_food"
+    drinks = "drinks"
+    gadgets = "gadgets"
+    furniture = "furniture"
+    electronics = "electronics"
+    clothing = "clothing"
+    beauty_health = "beauty_health"
+    books = "books"
     other = "other"
 
 
