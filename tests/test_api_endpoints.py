@@ -262,7 +262,7 @@ def test_all_endpoints_smoke(client: TestClient):
             "name": "Need Pizza",
             "description": "Large pepperoni pizza",
             "category": "food",
-            "anonymous": False,
+            "price_estimate": 1500.00,
             "delivery_address": "123 Testing Road",
             "recommended_vendor": "Pizza Hub",
             "vendor_link": "https://vendor.example/pizza-hub",
@@ -292,7 +292,7 @@ def test_all_endpoints_smoke(client: TestClient):
     share_token = share_url_response.json()["data"]["share_token"]
 
     upload_craving_image = client.post(
-        f"/cravings/{craving_id}/upload-image",
+        "/cravings/upload-image",
         headers=_auth_header(token_1),
         files={"file": ("craving.png", b"fake-craving", "image/png")},
     )

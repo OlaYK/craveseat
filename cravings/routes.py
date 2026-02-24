@@ -67,33 +67,24 @@ def get_share_url(
     }
 
 
-@router.post("/{craving_id}/upload-image", response_model=auth_schemas.StandardResponse[schemas.CravingResponse])
+@router.post("/upload-image", response_model=auth_schemas.GenericResponse)
 async def upload_craving_image(
-    craving_id: str,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_active_user),
 ):
-    """Upload/update an image for an existing craving"""
-    db_craving = crud.get_craving(db, craving_id)
-    if not db_craving:
-        raise HTTPException(status_code=404, detail="Craving not found")
-    
-    if db_craving.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this craving")
-    
+    """
+    Upload an image for a craving and get the URL.
+    This can be called before creating the craving.
+    """
     try:
         image_url = await upload_image(file, folder="cravings")
         if not image_url:
             raise HTTPException(status_code=500, detail="Image upload failed")
         
-        updated_craving = crud.update_craving(
-            db, craving_id, schemas.CravingUpdate(image_url=image_url)
-        )
         return {
             "success": True,
-            "message": "Craving image uploaded successfully",
-            "data": updated_craving
+            "message": "Image uploaded successfully",
+            "data": {"image_url": image_url}
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
